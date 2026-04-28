@@ -24,7 +24,7 @@ const socialLinks = [
   {
     name: "Instagram",
     displayName: "Instagram",
-    subText: "@ekizr_",
+    subText: "@Drxyzz",
     icon: Instagram,
     url: "https://www.instagram.com/youknowdrxyzz",
     color: "#E4405F",
