@@ -73,25 +73,30 @@ const SkeletonCard = () => (
 
 const ProjectCard = ({ project, onDelete, onEdit }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  
+  const placeholderImage = "https://placehold.co/800x400/1e1b4b/818cf8?text=No+Image";
 
   return (
     <Card>
       <div className="p-4 flex flex-col h-full">
-        {project.Img && (
-          <div className="w-full aspect-[16/8] rounded-xl mb-4 border border-white/8 overflow-hidden bg-white/5">
-            {!imgLoaded && (
-              <div className="w-full h-full animate-pulse bg-white/5" />
-            )}
-            <img
-              src={project.Img}
-              alt={project.Title}
-              onLoad={() => setImgLoaded(true)}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0 absolute"}`}
-            />
-          </div>
-        )}
+        <div className="w-full aspect-[16/8] rounded-xl mb-4 border border-white/8 overflow-hidden bg-white/5">
+          {!imgLoaded && !imgError && (
+            <div className="w-full h-full animate-pulse bg-white/5" />
+          )}
+          <img
+            src={imgError ? placeholderImage : project.Img}
+            alt={project.Title}
+            onLoad={() => setImgLoaded(true)}
+            onError={() => {
+              setImgError(true);
+              setImgLoaded(true);
+            }}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0 absolute"}`}
+          />
+        </div>
         <h3 className="font-semibold text-white text-sm mb-1">
-          {project.Title}
+          {project.Title || "Untitled"}
         </h3>
         {project.Description && (
           <p className="text-gray-400 text-xs mb-3 line-clamp-2 leading-relaxed">
@@ -100,9 +105,9 @@ const ProjectCard = ({ project, onDelete, onEdit }) => {
         )}
         {project.TechStack?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {project.TechStack.map((t) => (
+            {project.TechStack.map((t, idx) => (
               <span
-                key={t}
+                key={`${t}-${idx}`}
                 className="px-2 py-0.5 rounded-full bg-indigo-500/15 border border-indigo-500/25 text-indigo-300 text-xs"
               >
                 {t}
@@ -112,22 +117,24 @@ const ProjectCard = ({ project, onDelete, onEdit }) => {
         )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-white/8">
           <div className="flex gap-2">
-            {project.Link && (
+            {project.Link && project.Link !== "#" && (
               <a
                 href={project.Link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors"
+                aria-label={`Live demo of ${project.Title}`}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
-            {project.Github && (
+            {project.Github && project.Github !== "Private" && (
               <a
                 href={project.Github}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1.5 rounded-lg border border-white/10 text-gray-500 hover:text-white hover:border-white/20 transition-colors"
+                aria-label={`GitHub repo of ${project.Title}`}
               >
                 <Github className="w-3.5 h-3.5" />
               </a>
@@ -160,8 +167,7 @@ const Modal = ({ title, onClose, children }) => (
       onClick={onClose}
     />
     <div
-      className="relative z-10 w-full max-w-2xl flex flex-col"
-      style={{ maxHeight: "calc(100vh - 24px)" }}
+      className="relative z-10 w-full max-w-2xl flex flex-col max-h-[calc(100vh-2rem)]"
     >
       <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl blur opacity-20 pointer-events-none" />
       <div className="relative bg-[#0a0a1a] border border-white/12 rounded-2xl flex flex-col overflow-hidden">
@@ -204,6 +210,7 @@ const ProjectForm = ({
   });
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(initial?.Img || null);
+  const [formError, setFormError] = useState("");
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -214,14 +221,31 @@ const ProjectForm = ({
     setPreview(URL.createObjectURL(f));
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setFormError("");
+    
+    if (!form.Title.trim()) {
+      setFormError("Project title is required");
+      return;
+    }
+    
+    if (!form.Description.trim()) {
+      setFormError("Project description is required");
+      return;
+    }
+    
+    onSubmit(form, file);
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(form, file);
-      }}
-      className="p-5 sm:p-6 space-y-4"
-    >
+    <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
+      {formError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-400 text-sm text-center">
+          {formError}
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <InputField
@@ -337,15 +361,26 @@ export default function Projects() {
   const [showCreate, setShowCreate] = useState(false);
   const [editProject, setEditProject] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   const fetchProjects = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setProjects(data || []);
-    setLoading(false);
+    setError("");
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (fetchError) throw fetchError;
+      setProjects(data || []);
+    } catch (err) {
+      console.error("Failed to fetch projects:", err);
+      setError("Failed to load projects. Please refresh the page.");
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -354,7 +389,12 @@ export default function Projects() {
 
   const uploadImage = async (f) => {
     const fileName = `${Date.now()}-${f.name}`;
-    await supabase.storage.from("project-images").upload(fileName, f);
+    const { error: uploadError } = await supabase.storage
+      .from("project-images")
+      .upload(fileName, f);
+    
+    if (uploadError) throw uploadError;
+    
     const { data } = supabase.storage
       .from("project-images")
       .getPublicUrl(fileName);
@@ -363,33 +403,12 @@ export default function Projects() {
 
   const handleCreate = async (form, file) => {
     setUploading(true);
-    let imgUrl = "";
-    if (file) imgUrl = await uploadImage(file);
-    await supabase.from("projects").insert({
-      Title: form.Title,
-      Description: form.Description,
-      Img: imgUrl,
-      TechStack: form.TechStack.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      Features: form.Features.split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      Link: form.Link,
-      Github: form.Github,
-    });
-    setShowCreate(false);
-    setUploading(false);
-    fetchProjects();
-  };
-
-  const handleEdit = async (form, file) => {
-    setUploading(true);
-    let imgUrl = editProject.Img || "";
-    if (file) imgUrl = await uploadImage(file);
-    await supabase
-      .from("projects")
-      .update({
+    setError("");
+    try {
+      let imgUrl = "";
+      if (file) imgUrl = await uploadImage(file);
+      
+      const { error: insertError } = await supabase.from("projects").insert({
         Title: form.Title,
         Description: form.Description,
         Img: imgUrl,
@@ -401,21 +420,77 @@ export default function Projects() {
           .filter(Boolean),
         Link: form.Link,
         Github: form.Github,
-      })
-      .eq("id", editProject.id);
-    setEditProject(null);
-    setUploading(false);
-    fetchProjects();
+      });
+      
+      if (insertError) throw insertError;
+      
+      setShowCreate(false);
+      await fetchProjects();
+    } catch (err) {
+      console.error("Failed to create project:", err);
+      setError("Failed to create project. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEdit = async (form, file) => {
+    setUploading(true);
+    setError("");
+    try {
+      let imgUrl = editProject.Img || "";
+      if (file) imgUrl = await uploadImage(file);
+      
+      const { error: updateError } = await supabase
+        .from("projects")
+        .update({
+          Title: form.Title,
+          Description: form.Description,
+          Img: imgUrl,
+          TechStack: form.TechStack.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          Features: form.Features.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          Link: form.Link,
+          Github: form.Github,
+        })
+        .eq("id", editProject.id);
+      
+      if (updateError) throw updateError;
+      
+      setEditProject(null);
+      await fetchProjects();
+    } catch (err) {
+      console.error("Failed to update project:", err);
+      setError("Failed to update project. Please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const deleteProject = async (id) => {
-    if (!confirm("Delete this project?")) return;
-    await supabase.from("projects").delete().eq("id", id);
-    fetchProjects();
+    const confirmed = window.confirm("Delete this project? This action cannot be undone.");
+    if (!confirmed) return;
+    
+    try {
+      const { error: deleteError } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", id);
+      
+      if (deleteError) throw deleteError;
+      
+      await fetchProjects();
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      setError("Failed to delete project. Please try again.");
+    }
   };
 
   return (
-    <div className="space-y-6z ">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
@@ -446,6 +521,13 @@ export default function Projects() {
           </div>
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm text-center">
+          {error}
+        </div>
+      )}
 
       {/* Create Modal */}
       {showCreate && (
