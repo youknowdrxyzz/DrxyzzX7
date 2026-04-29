@@ -123,41 +123,27 @@ const ProjectDetails = () => {
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    
-    try {
-      const storedData = localStorage.getItem("projects");
-      const storedProjects = storedData ? JSON.parse(storedData) : [];
-      
-      // Cari project berdasarkan slug yang di-generate dari Title
-      const selectedProject = storedProjects.find(
-        (p) => toSlug(p.Title) === slug
-      );
+    const storedProjects = JSON.parse(localStorage.getItem("projects")) || [];
+    // Cari project berdasarkan slug yang di-generate dari Title
+    const selectedProject = storedProjects.find(
+      (p) => toSlug(p.Title) === slug,
+    );
 
-      if (selectedProject) {
-        const enhancedProject = {
-          ...selectedProject,
-          Features: selectedProject.Features || [],
-          TechStack: selectedProject.TechStack || [],
-          Github: selectedProject.Github || "https://github.com/youknowdrxyzz",
-          Link: selectedProject.Link || "#",
-        };
-        setProject(enhancedProject);
-        setNotFound(false);
-      } else {
-        setNotFound(true);
-      }
-    } catch (error) {
-      console.error("Error loading project:", error);
-      setNotFound(true);
+    if (selectedProject) {
+      const enhancedProject = {
+        ...selectedProject,
+        Features: selectedProject.Features || [],
+        TechStack: selectedProject.TechStack || [],
+        Github: selectedProject.Github || "https://github.com/EkiZR",
+      };
+      setProject(enhancedProject);
     }
   }, [slug]);
 
-  // Handle loading state
-  if (!project && !notFound) {
+  if (!project) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center space-y-6 animate-fadeIn">
@@ -170,50 +156,25 @@ const ProjectDetails = () => {
     );
   }
 
-  // Handle not found
-  if (notFound) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
-        <div className="text-center space-y-6 animate-fadeIn">
-          <div className="w-20 h-20 mx-auto bg-red-500/20 rounded-full flex items-center justify-center">
-            <span className="text-4xl">🔍</span>
-          </div>
-          <h1 className="text-2xl md:text-4xl font-bold text-white">Project Not Found</h1>
-          <p className="text-gray-400 max-w-md">
-            The project you're looking for doesn't exist or has been removed.
-          </p>
-          <button
-            onClick={() => navigate('/projects')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Projects
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Dynamic URL - gak hardcoded lagi
-  const projectUrl = `${window.location.origin}/project/${toSlug(project.Title)}`;
+  const projectUrl = `https://ekizr.com/project/${toSlug(project.Title)}`;
 
   return (
     <>
       <Helmet>
-        <title>{project.Title} — DrxyzzX7</title>
+        <title>{project.Title} — Eki Zulfar Rachman</title>
         <meta
           name="description"
           content={
             project.Description
               ? project.Description.slice(0, 155)
-              : `Project ${project.Title} oleh DrxyzzX7 — Frontend Web Developer.`
+              : `Project ${project.Title} oleh Eki Zulfar Rachman — Frontend Web Developer.`
           }
         />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={projectUrl} />
         <meta
           property="og:title"
-          content={`${project.Title} — DrxyzzX7`}
+          content={`${project.Title} — Eki Zulfar Rachman`}
         />
         <meta
           property="og:description"
@@ -222,20 +183,20 @@ const ProjectDetails = () => {
         <meta property="og:url" content={projectUrl} />
         <meta property="og:type" content="website" />
         {project.Img && <meta property="og:image" content={project.Img} />}
-        <script type="application/ld+json">
-          {JSON.stringify({
+        <script type="application/ld+json">{`
+          {
             "@context": "https://schema.org",
             "@type": "CreativeWork",
-            "name": project.Title,
-            "description": project.Description?.replace(/"/g, '\\"') || "",
-            "url": projectUrl,
+            "name": "${project.Title}",
+            "description": "${project.Description?.replace(/"/g, '\\"')}",
+            "url": "${projectUrl}",
             "author": {
               "@type": "Person",
-              "name": "Drxyzz Technical",
-              "url": "https://drxyzzx.vercel.app/"
+              "name": "Eki Zulfar Rachman",
+              "url": "https://ekizr.com"
             }
-          })}
-        </script>
+          }
+        `}</script>
       </Helmet>
 
       <div className="min-h-screen bg-[#030014] px-[2%] sm:px-0 relative overflow-hidden">
@@ -286,23 +247,16 @@ const ProjectDetails = () => {
                 <ProjectStats project={project} />
 
                 <div className="flex flex-wrap gap-3 md:gap-4">
-                  {project.Link && project.Link !== "#" ? (
-                    <a
-                      href={project.Link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative inline-flex items-center space-x-1.5 md:space-x-2 px-4 md:px-8 py-2.5 md:py-4 bg-gradient-to-r from-blue-600/10 to-purple-600/10 hover:from-blue-600/20 hover:to-purple-600/20 text-blue-300 rounded-xl transition-all duration-300 border border-blue-500/20 hover:border-blue-500/40 backdrop-blur-xl overflow-hidden text-sm md:text-base"
-                    >
-                      <div className="absolute inset-0 translate-y-[100%] bg-gradient-to-r from-blue-600/10 to-purple-600/10 transition-transform duration-300 group-hover:translate-y-[0%]" />
-                      <ExternalLink className="relative w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" />
-                      <span className="relative font-medium">Live Demo</span>
-                    </a>
-                  ) : (
-                    <span className="inline-flex items-center space-x-1.5 md:space-x-2 px-4 md:px-8 py-2.5 md:py-4 bg-gray-600/10 text-gray-500 rounded-xl border border-gray-500/20 text-sm md:text-base cursor-not-allowed">
-                      <ExternalLink className="relative w-4 h-4 md:w-5 md:h-5" />
-                      <span className="relative font-medium">No Demo</span>
-                    </span>
-                  )}
+                  <a
+                    href={project.Link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative inline-flex items-center space-x-1.5 md:space-x-2 px-4 md:px-8 py-2.5 md:py-4 bg-gradient-to-r from-blue-600/10 to-purple-600/10 hover:from-blue-600/20 hover:to-purple-600/20 text-blue-300 rounded-xl transition-all duration-300 border border-blue-500/20 hover:border-blue-500/40 backdrop-blur-xl overflow-hidden text-sm md:text-base"
+                  >
+                    <div className="absolute inset-0 translate-y-[100%] bg-gradient-to-r from-blue-600/10 to-purple-600/10 transition-transform duration-300 group-hover:translate-y-[0%]" />
+                    <ExternalLink className="relative w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" />
+                    <span className="relative font-medium">Live Demo</span>
+                  </a>
 
                   <a
                     href={project.Github}
@@ -315,7 +269,7 @@ const ProjectDetails = () => {
                   >
                     <div className="absolute inset-0 translate-y-[100%] bg-gradient-to-r from-purple-600/10 to-pink-600/10 transition-transform duration-300 group-hover:translate-y-[0%]" />
                     <Github className="relative w-4 h-4 md:w-5 md:h-5 group-hover:rotate-12 transition-transform" />
-                    <span className="relative font-medium">GitHub</span>
+                    <span className="relative font-medium">Github</span>
                   </a>
                 </div>
 
@@ -327,7 +281,7 @@ const ProjectDetails = () => {
                   {project.TechStack.length > 0 ? (
                     <div className="flex flex-wrap gap-2 md:gap-3">
                       {project.TechStack.map((tech, index) => (
-                        <TechBadge key={`${tech}-${index}`} tech={tech} />
+                        <TechBadge key={index} tech={tech} />
                       ))}
                     </div>
                   ) : (
@@ -341,20 +295,11 @@ const ProjectDetails = () => {
               <div className="space-y-6 md:space-y-10 animate-slideInRight">
                 <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
                   <div className="absolute inset-0 bg-gradient-to-t from-[#030014] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  {!isImageLoaded && (
-                    <div className="absolute inset-0 bg-white/5 animate-pulse" />
-                  )}
                   <img
                     src={project.Img}
                     alt={project.Title}
-                    className={`w-full object-cover transform transition-all duration-700 will-change-transform group-hover:scale-105 ${
-                      isImageLoaded ? "opacity-100" : "opacity-0"
-                    }`}
+                    className="w-full object-cover transform transition-transform duration-700 will-change-transform group-hover:scale-105"
                     onLoad={() => setIsImageLoaded(true)}
-                    onError={(e) => {
-                      e.target.src = "/placeholder-project.jpg";
-                      setIsImageLoaded(true);
-                    }}
                   />
                   <div className="absolute inset-0 border-2 border-white/0 group-hover:border-white/10 transition-colors duration-300 rounded-2xl" />
                 </div>
@@ -367,7 +312,7 @@ const ProjectDetails = () => {
                   {project.Features.length > 0 ? (
                     <ul className="list-none space-y-2">
                       {project.Features.map((feature, index) => (
-                        <FeatureItem key={`${feature}-${index}`} feature={feature} />
+                        <FeatureItem key={index} feature={feature} />
                       ))}
                     </ul>
                   ) : (
